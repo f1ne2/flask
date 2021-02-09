@@ -4,4 +4,5 @@
 /app/__pycache__/*
 /.idea/*
 /tests/test_models.db
-/app/api/*
+/app/api/__pycache__/*
+/app/repository/__pychace__/*

@@ -1,46 +1,48 @@
-from app import app, db
-from flask import render_template, request, flash, redirect, url_for
-from app.forms import AddCategoryForm, DeleteCategoryForm
-from app.models import Categories, Questions, Answers
+from app import api
+from flask import Flask, render_template, request, url_for
+from flask_restful import Resource, Api, reqparse
+from app.api.api_interface import Connection
+from app.repository.db_requests import Requests
 
 
-@app.route('/')
-@app.route('/index')
-def index():
-    return render_template('base.html', title='Home')
+class Routes:
+    def __init__(self, interface: Connection):
+        self.interface = interface
+
+    def add(self, category_id: str, added: str) -> None:
+        category_id = category_id.split("_")[1]
+        self.interface.put(category_id, added)
+
+    def delete(self, category_id: str) -> None:
+        self.interface.delete(category_id)
+
+    def get(self) -> dict:
+        return dict(self.interface.get())
 
 
-@app.route('/add_category', methods=['GET', 'POST'])
-def add_category():
-    form = AddCategoryForm()
-    if form.validate_on_submit():
-        flash('Category added {} Category id {}'.format(
-            form.name.data, form.id.data))
-        note = Categories(category_id=form.id.data,
-                          category_name=form.name.data)
-        db.session.add(note)
-        db.session.commit()
-        return redirect(url_for('index'))
-    return render_template('add_category.html', title='Add category',
-                           form=form)
+all_categories = {}
+req = Requests()
+data = Routes(req)
 
 
-@app.route('/delete_category', methods=['GET', 'POST'])
-def delete_category():
-    form =DeleteCategoryForm()
-    if form.validate_on_submit():
-        flash('Category deleted {}'.format(
-            form.name.data))
-        db.session.query(Categories).filter_by\
-            (category_name=form.name.data).delete()
-        db.session.commit()
-        return redirect(url_for('index'))
-    return render_template('delete_category.html', title='Delete category',
-                           form=form)
+class ListCategories(Resource):
+    def put(self, category_id) -> dict:
+        data.add(category_id, request.form['data'])
+        return {category_id: [all_categories[category_id], "201 Created",
+                              "HTTP/1.1"]}
 
 
-@app.route('/all_categories')
-def all_categories():
-    list_categories = db.session.query(Categories).all()
-    return render_template('all_categories.html', title='ALL categories',
-                           list_categories=list_categories)
+class DeleteCategory(Resource):
+    def delete(self, id) -> dict:
+        data.delete(id)
+        return {id: ["200 OK", "HTTP/1.1"]}
+
+
+class AllCategories(Resource):
+    def get(self):
+        return {"200 OK HTTP/1.1": data.get()}
+
+
+api.add_resource(ListCategories, '/<string:category_id>')
+api.add_resource(DeleteCategory, '/delete/<int:id>')
+api.add_resource(AllCategories, '/all_categories')
