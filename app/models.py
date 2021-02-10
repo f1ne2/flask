@@ -1,5 +1,5 @@
-from app import app
 from app import db
+from typing import List
 
 
 class Categories(db.Model):
@@ -9,6 +9,36 @@ class Categories(db.Model):
 
     def __repr__(self) -> str:
         return '{}'.format(self.category_name)
+
+    def put_category(self, category_id: int, category_name: str) -> None:
+        note = Categories(category_id=category_id, category_name=category_name)
+        db.session.add(note)
+        db.session.commit()
+
+    def get_all_table(self) -> List[list]:
+        result = db.session.query(Categories).all()
+        return [[element.category_id, element.category_name] for element in
+                result]
+
+    def delete_note(self, category_id: int) -> None:
+        delt = db.session.query(Categories).filter_by\
+            (category_id=category_id).one()
+        db.session.delete(delt)
+        db.session.commit()
+
+    def to_json(self):
+        json_category = {"Category_id": self.category_id,
+                         "Category_name": self.category_name}
+        return json_category
+
+    def check_exist_category(self, category_id: int, category_name: str) -> \
+            bool:
+        arr = db.session.query(Categories).all()
+        arr_id = [item.category_id for item in arr]
+        arr_name = [item.category_name for item in arr]
+        if category_id in arr_id or category_name in arr_name:
+            return True
+        return False
 
 
 class Questions(db.Model):
