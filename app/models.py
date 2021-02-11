@@ -10,12 +10,17 @@ class Categories(db.Model):
     def __repr__(self) -> str:
         return '{}'.format(self.category_name)
 
-    def put_category(self, category_id: int, category_name: str) -> None:
-        note = Categories(category_id=category_id, category_name=category_name)
+    def put_category(self, category_name: str) -> None:
+        arr = db.session.query(Categories).all()
+        if arr:
+            put_id = arr[-1].category_id + 1
+        else:
+            put_id = 1
+        note = Categories(category_id=put_id, category_name=category_name)
         db.session.add(note)
         db.session.commit()
 
-    def get_all_table(self) -> List[list]:
+    def get_all_categories(self) -> List[list]:
         result = db.session.query(Categories).all()
         return [[element.category_id, element.category_name] for element in
                 result]
@@ -31,14 +36,20 @@ class Categories(db.Model):
                          "Category_name": self.category_name}
         return json_category
 
-    def check_exist_category(self, category_id: int, category_name: str) -> \
+    def check_exist_category(self, category_name: str) -> \
             bool:
         arr = db.session.query(Categories).all()
-        arr_id = [item.category_id for item in arr]
         arr_name = [item.category_name for item in arr]
-        if category_id in arr_id or category_name in arr_name:
+        if category_name in arr_name:
             return True
         return False
+
+    def post_category(self, new_name: str, category_id: int) -> None:
+        cat = db.session.query(Categories).filter_by\
+            (category_id=category_id).one()
+        cat.category_name = new_name
+        db.session.add(cat)
+        db.session.commit()
 
 
 class Questions(db.Model):
