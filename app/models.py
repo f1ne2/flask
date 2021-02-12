@@ -43,12 +43,19 @@ class Categories(db.Model):
         return False
 
     @staticmethod
-    def edit(category_name: str, id: int) -> None:
-        category = db.session.query(Categories).filter_by\
-            (category_id=id).one()
-        category.category_name = category_name
-        db.session.add(category)
-        db.session.commit()
+    def edit(category_name: str, id: int) -> bool:
+        categories = db.session.query(Categories).all()
+        categories_names = [item.category_name for item in categories]
+        for item in categories:
+            if (item.category_name == category_name and item.category_id == id)\
+                    or category_name not in categories_names:
+                category = db.session.query(Categories).filter_by\
+                    (category_id=id).one()
+                category.category_name = category_name
+                db.session.add(category)
+                db.session.commit()
+                return False
+        return True
 
 
 class Questions(db.Model):

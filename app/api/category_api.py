@@ -34,7 +34,7 @@ def delete_category(id: int) -> wrappers.Response:
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     category = request.form['data']
-    if Categories.check_exist_category(category):
+    if Categories.edit(category, id):
         return jsonify({"403 Forbidden": "HTTP/1.1"})
     Categories.edit(category, id)
     return jsonify({"200 OK": "HTTP/1.1"})
