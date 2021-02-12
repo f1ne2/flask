@@ -30,11 +30,11 @@ def delete_category(id: int) -> wrappers.Response:
     return jsonify({"200 OK": "HTTP/1.1"})
 
 
-@app.route('/category/<int:id>', methods=['POST'])
+@app.route('/category/<int:id>', methods=['PUT'])
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     category = request.form['data']
     if Categories.check_exist_category(category):
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-    Categories.edit(category)
+    Categories.edit(category, id)
     return jsonify({"200 OK": "HTTP/1.1"})

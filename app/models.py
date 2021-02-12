@@ -4,35 +4,29 @@ from typing import List
 
 class Categories(db.Model):
     category_id = db.Column(db.Integer, primary_key=True)
-    category_name = db.Column(db.String(64), nullable=False)
-    categories = db.relationship("Questions", backref="quest", lazy='dynamic')
+    category_name = db.Column(db.String(64), nullable=False, unique=True)
+    questions = db.relationship("Questions", backref="quest", lazy='dynamic')
 
     def __repr__(self) -> str:
         return '{}'.format(self.category_name)
 
     @staticmethod
     def add(category_name: str) -> None:
-        arr = db.session.query(Categories).all()
-        arr_id = sorted([item.category_id for item in arr], reverse=True)
-        if arr:
-            put_id = arr_id[0]+1
-        else:
-            put_id = 1
-        note = Categories(category_id=put_id, category_name=category_name)
-        db.session.add(note)
+        category = Categories(category_name=category_name)
+        db.session.add(category)
         db.session.commit()
 
     @staticmethod
     def get_categories() -> List[list]:
-        result = db.session.query(Categories).all()
-        return [[element.category_id, element.category_name] for element in
-                result]
+        categories = db.session.query(Categories).all()
+        return [[item.category_id, item.category_name] for item in
+                categories]
 
     @staticmethod
     def delete_note(category_id: int) -> None:
-        delt = db.session.query(Categories).filter_by\
+        delete = db.session.query(Categories).filter_by\
             (category_id=category_id).one()
-        db.session.delete(delt)
+        db.session.delete(delete)
         db.session.commit()
 
     def to_json(self):
@@ -41,32 +35,35 @@ class Categories(db.Model):
         return json_category
 
     @staticmethod
-    def check_exist_category(category_name: str) -> \
-            bool:
-        arr = db.session.query(Categories).all()
-        arr_name = [item.category_name for item in arr]
-        if category_name in arr_name:
+    def check_exist_category(category_name: str) -> bool:
+        categories = db.session.query(Categories).all()
+        categories_names = [item.category_name for item in categories]
+        if category_name in categories_names:
             return True
         return False
 
     @staticmethod
-    def edit(category_name: str) -> None:
-        cat = db.session.query(Categories).filter_by\
-            (category_id=category_name).one()
-        cat.category_name = category_name
-        db.session.add(cat)
+    def edit(category_name: str, id: int) -> None:
+        category = db.session.query(Categories).filter_by\
+            (category_id=id).one()
+        category.category_name = category_name
+        db.session.add(category)
         db.session.commit()
 
 
 class Questions(db.Model):
     category_id = db.Column(db.Integer,
                             db.ForeignKey('categories.category_id'))
-    question = db.Column(db.String(140), nullable=False)
+    question = db.Column(db.String(140), nullable=False, unique=True)
     question_id = db.Column(db.Integer, primary_key=True)
-    questions = db.relationship("Answers", backref="answ", lazy='dynamic')
+    answers = db.relationship("Answers", backref="answ", lazy='dynamic')
 
     def __repr__(self) -> str:
         return '{}'.format(self.question)
+
+    def __eq__(self, other):
+        return self.question == other.question and self.category_id == \
+               other.category_id and self.question_id == other.question_id
 
 
 class Answers(db.Model):
@@ -77,3 +74,8 @@ class Answers(db.Model):
 
     def __repr__(self) -> str:
         return '{}'.format(self.answer)
+
+    def __eq__(self, other):
+        return self.answer == other.answer and self.answer_id == \
+               other.answer_id and self.question_id == other.question_id and \
+               self.right_answer == other.right_answer
