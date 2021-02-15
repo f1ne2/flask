@@ -1,5 +1,6 @@
 from app import db
 from typing import List
+from sqlalchemy.dialects.postgresql import insert
 
 
 class Categories(db.Model):
@@ -44,17 +45,14 @@ class Categories(db.Model):
 
     @staticmethod
     def edit(category_name: str, id: int) -> bool:
-        categories = db.session.query(Categories).all()
-        categories_names = [item.category_name for item in categories]
-        for item in categories:
-            if (item.category_name == category_name and item.category_id == id)\
-                    or category_name not in categories_names:
-                category = db.session.query(Categories).filter_by\
-                    (category_id=id).one()
-                category.category_name = category_name
-                db.session.add(category)
-                db.session.commit()
-                return False
+        if (Categories.query.get(id).category_name == category_name and
+            Categories.query.get(id).category_id == id) or category_name not \
+            in [item.category_name for item in
+                db.session.query(Categories).all()]:
+            Categories.query.filter_by(category_id=id).update\
+                (dict(category_name=category_name))
+            db.session.commit()
+            return False
         return True
 
 
@@ -63,7 +61,7 @@ class Questions(db.Model):
                             db.ForeignKey('categories.category_id'))
     question = db.Column(db.String(140), nullable=False, unique=True)
     question_id = db.Column(db.Integer, primary_key=True)
-    answers = db.relationship("Answers", backref="answ", lazy='dynamic')
+    answers = db.relationship("Answers", backref="questions", lazy='dynamic')
 
     def __repr__(self) -> str:
         return '{}'.format(self.question)

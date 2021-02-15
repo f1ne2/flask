@@ -36,5 +36,4 @@ def edit_category(id: int) -> wrappers.Response:
     category = request.form['data']
     if Categories.edit(category, id):
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-    Categories.edit(category, id)
     return jsonify({"200 OK": "HTTP/1.1"})
