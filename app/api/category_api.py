@@ -1,21 +1,75 @@
-from app import app
+from app import app, token_required
 from app import db
-from flask import jsonify, wrappers, request
-from app.models import Categories
+from flask import jsonify, wrappers, request, make_response
+from app.models import Categories, Users
+
+from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
+import jwt
+import datetime
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def signup_user():
+    data = request.get_json()
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+    new_user = Users(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'registered successfully'})
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_user():
+    auth = request.authorization
+
+    if not auth or not auth.username or not auth.password:
+        return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
+
+    user = Users.query.filter_by(name=auth.username).first()
+
+    if check_password_hash(user.password, auth.password):
+        token = jwt.encode(
+            {'public_id': user.public_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+            app.config['SECRET_KEY'])
+        return jsonify({'token': token.decode('UTF-8')})
+
+    return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
+
+
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = Users.query.all()
+
+    result = []
+
+    for user in users:
+        user_data = {}
+        user_data['public_id'] = user.public_id
+        user_data['name'] = user.name
+        user_data['password'] = user.password
+        user_data['admin'] = user.admin
+
+        result.append(user_data)
+
+    return jsonify({'users': result})
 
 
 @app.route('/categories/', methods=['GET'])
+@token_required
 def categories() -> wrappers.Response:
     return jsonify(dict(Categories.get_categories()))
 
 
 @app.route('/category/<int:id>', methods=['GET'])
+@token_required
 def get_category(id: int) -> wrappers.Response:
     category = Categories.query.get_or_404(id)
     return jsonify(category.to_json())
 
 
 @app.route('/category/', methods=['POST'])
+@token_required
 def add_category() -> wrappers.Response:
     category = request.form['data']
     try:
@@ -26,6 +80,7 @@ def add_category() -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
+@token_required
 def delete_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
@@ -33,6 +88,7 @@ def delete_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
+@token_required
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     try:
@@ -40,4 +96,3 @@ def edit_category(id: int) -> wrappers.Response:
         return jsonify({"200 OK": "HTTP/1.1"})
     except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-
