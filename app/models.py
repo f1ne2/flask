@@ -1,10 +1,5 @@
-import sqlalchemy
 from app import db
 from typing import List
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.schema import PrimaryKeyConstraint, UniqueConstraint
-from sqlalchemy import exc
-from sqlalchemy import orm
 
 
 class Categories(db.Model):
