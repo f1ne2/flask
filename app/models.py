@@ -34,13 +34,6 @@ class Categories(db.Model):
                          "Category_name": self.category_name}
         return json_category
 
-    @staticmethod
-    def check_exist_category(category_name: str) -> bool:
-        categories = db.session.query(Categories).all()
-        categories_names = [item.category_name for item in categories]
-        if category_name in categories_names:
-            return True
-        return False
 
     @staticmethod
     def edit(category_name: str, id: int) -> None:

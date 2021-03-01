@@ -18,10 +18,11 @@ def get_category(id: int) -> wrappers.Response:
 @app.route('/category/', methods=['POST'])
 def add_category() -> wrappers.Response:
     category = request.form['data']
-    if Categories.check_exist_category(category):
+    try:
+        Categories.add(category)
+        return jsonify({"201 Created": "HTTP/1.1"})
+    except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-    Categories.add(category)
-    return jsonify({"201 Created": "HTTP/1.1"})
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
