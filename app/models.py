@@ -54,17 +54,6 @@ class Categories(db.Model):
         db.session.commit()
 
 
-# insert_stmt = insert(Categories).values(category_name=category_name)
-#             do_nothing_stmt = insert_stmt.on_conflict_do_nothing(
-#                 index_elements=["category_name"])
-#             db.session.execute(do_nothing_stmt)
-#             db.session.commit()
-# if Categories.query.filter_by(category_id=id).update \
-#             (dict(category_name=category_name))
-#     db.session.commit()
-#     return False
-# return True
-
 class Questions(db.Model):
     category_id = db.Column(db.Integer,
                             db.ForeignKey('categories.category_id'))
