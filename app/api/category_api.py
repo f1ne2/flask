@@ -1,12 +1,31 @@
-from app import app, token_required
+from app import app
 from app import db
+from config import Config
 from flask import jsonify, wrappers, request, make_response
 from app.models import Categories, Users
-
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import jwt
 import datetime
+from functools import wraps
+
+
+def token_required(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        token = None
+        if 'x-access-tokens' in request.headers:
+            token = request.headers['x-access-tokens']
+        if not token:
+            return jsonify({'message': 'a valid token is missing'})
+        try:
+            data = jwt.decode(token, app.config[Config.SECRET_KEY])
+            current_user = Users.query.filter_by(public_id=data['public_id']).first()
+            return f(current_user, *args, **kwargs)
+        except:
+            return jsonify({'message': 'token is invalid'})
+
+    return decorator
 
 
 @app.route('/register', methods=['GET', 'POST'])
