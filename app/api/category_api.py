@@ -1,4 +1,5 @@
 from app import app
+from app import db
 from flask import jsonify, wrappers, request
 from app.models import Categories
 
@@ -33,7 +34,9 @@ def delete_category(id: int) -> wrappers.Response:
 @app.route('/category/<int:id>', methods=['PUT'])
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
-    category = request.form['data']
-    if Categories.edit(category, id):
+    try:
+        Categories.edit(request.form['data'], id)
+        return jsonify({"200 OK": "HTTP/1.1"})
+    except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-    return jsonify({"200 OK": "HTTP/1.1"})
+

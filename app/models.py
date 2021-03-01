@@ -1,6 +1,10 @@
+import sqlalchemy
 from app import db
 from typing import List
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.schema import PrimaryKeyConstraint, UniqueConstraint
+from sqlalchemy import exc
+from sqlalchemy import orm
 
 
 class Categories(db.Model):
@@ -44,17 +48,22 @@ class Categories(db.Model):
         return False
 
     @staticmethod
-    def edit(category_name: str, id: int) -> bool:
-        if (Categories.query.get(id).category_name == category_name and
-            Categories.query.get(id).category_id == id) or category_name not \
-            in [item.category_name for item in
-                db.session.query(Categories).all()]:
-            Categories.query.filter_by(category_id=id).update\
-                (dict(category_name=category_name))
-            db.session.commit()
-            return False
-        return True
+    def edit(category_name: str, id: int) -> None:
+        Categories.query.filter_by(category_id=id).update \
+            (dict(category_name=category_name))
+        db.session.commit()
 
+
+# insert_stmt = insert(Categories).values(category_name=category_name)
+#             do_nothing_stmt = insert_stmt.on_conflict_do_nothing(
+#                 index_elements=["category_name"])
+#             db.session.execute(do_nothing_stmt)
+#             db.session.commit()
+# if Categories.query.filter_by(category_id=id).update \
+#             (dict(category_name=category_name))
+#     db.session.commit()
+#     return False
+# return True
 
 class Questions(db.Model):
     category_id = db.Column(db.Integer,

@@ -12,3 +12,4 @@ from app import models
 from app.api import category_api
 
 db.create_all()
+
