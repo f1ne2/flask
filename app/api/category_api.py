@@ -28,9 +28,15 @@ def token_required(f):
     return decorator
 
 
+@app.route('/')
+def home_page():
+    return 'Home page!'
+
+
 @app.route('/register', methods=['GET', 'POST'])
-def signup_user():
+def signup_user() -> wrappers.Response:
     data = request.get_json()
+
     hashed_password = generate_password_hash(data['password'], method='sha256')
     new_user = Users(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
     db.session.add(new_user)
@@ -75,13 +81,11 @@ def get_all_users():
 
 
 @app.route('/categories/', methods=['GET'])
-@token_required
 def categories() -> wrappers.Response:
     return jsonify(dict(Categories.get_categories()))
 
 
 @app.route('/category/<int:id>', methods=['GET'])
-@token_required
 def get_category(id: int) -> wrappers.Response:
     category = Categories.query.get_or_404(id)
     return jsonify(category.to_json())
