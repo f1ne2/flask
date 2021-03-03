@@ -1,6 +1,5 @@
 from app import app
 from app import db
-from config import Config
 from flask import jsonify, wrappers, request, make_response
 from app.models import Categories, Users
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -44,7 +43,9 @@ def create_user():
 
 
 @app.route('/user', methods=['GET'])
-def get_all_users():
+def get_all_users(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     users = Users.query.all()
     output = []
     for user in users:
@@ -59,7 +60,9 @@ def get_all_users():
 
 
 @app.route('/user/<public_id>', methods=['GET'])
-def get_one_user(public_id):
+def get_one_user(public_id, current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     user = Users.query.filter_by(public_id=public_id).first()
     if not user:
         return jsonify({'message': 'No user found!'})
@@ -74,7 +77,10 @@ def get_one_user(public_id):
 
 
 @app.route('/user/<public_id>', methods=['PUT'])
-def promote_user(public_id):
+@token_required
+def promote_user(current_user, public_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     user = Users.query.filter_by(public_id=public_id).first()
 
     if not user:
@@ -87,7 +93,10 @@ def promote_user(public_id):
 
 
 @app.route('/user/<public_id>', methods=['DELETE'])
-def delete_user(public_id):
+@token_required
+def delete_user(current_user, public_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     user = Users.query.filter_by(public_id=public_id).first()
 
     if not user:
@@ -113,11 +122,10 @@ def login():
 
     if check_password_hash(user.password, auth.password):
         token = jwt.encode({'public_id': user.public_id,
-                            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+                            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
                            app.config['SECRET_KEY'])
 
-        return jsonify({'token': token.decode('UTF-8')})
-        # return jsonify({'token': token})
+        return jsonify({'token': token.encode("windows-1252").decode("utf-8")})
 
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
 
@@ -135,7 +143,10 @@ def get_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/', methods=['POST'])
-def add_category() -> wrappers.Response:
+@token_required
+def add_category(current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     category = request.form['data']
     try:
         Categories.add(category)
@@ -145,14 +156,20 @@ def add_category() -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
-def delete_category(id: int) -> wrappers.Response:
+@token_required
+def delete_category(id: int, current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
     return jsonify({"200 OK": "HTTP/1.1"})
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
-def edit_category(id: int) -> wrappers.Response:
+@token_required
+def edit_category(id: int, current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
     Categories.query.get_or_404(id)
     try:
         Categories.edit(request.form['data'], id)
