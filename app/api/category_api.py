@@ -12,20 +12,20 @@ from functools import wraps
 
 def token_required(f):
     @wraps(f)
-    def decorator(*args, **kwargs):
+    def decorated(*args, **kwargs):
         token = None
-        if 'x-access-tokens' in request.headers:
-            token = request.headers['x-access-tokens']
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
         if not token:
-            return jsonify({'message': 'a valid token is missing'})
+            return jsonify({'message': 'Token is missing!'}), 401
         try:
-            data = jwt.decode(token, app.config[Config.SECRET_KEY])
+            data = jwt.decode(token, app.config['SECRET_KEY'])
             current_user = Users.query.filter_by(public_id=data['public_id']).first()
-            return f(current_user, *args, **kwargs)
         except:
-            return jsonify({'message': 'token is invalid'})
+            return jsonify({'message': 'Token is invalid!'}), 401
+        return f(current_user, *args, **kwargs)
 
-    return decorator
+    return decorated
 
 
 @app.route('/')
@@ -33,53 +33,96 @@ def home_page():
     return 'Home page!'
 
 
-@app.route('/register', methods=['GET', 'POST'])
-def signup_user() -> wrappers.Response:
+@app.route('/user', methods=['POST'])
+def create_user():
     data = request.get_json()
-
     hashed_password = generate_password_hash(data['password'], method='sha256')
     new_user = Users(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
     db.session.add(new_user)
     db.session.commit()
-    return jsonify({'message': 'registered successfully'})
+    return jsonify({'message': 'New user created!'})
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login_user():
-    auth = request.authorization
-
-    if not auth or not auth.username or not auth.password:
-        return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
-
-    user = Users.query.filter_by(name=auth.username).first()
-
-    if check_password_hash(user.password, auth.password):
-        token = jwt.encode(
-            {'public_id': user.public_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
-            app.config['SECRET_KEY'])
-        return jsonify({'token': token.decode('UTF-8')})
-
-    return make_response('could not verify', 401, {'WWW.Authentication': 'Basic realm: "login required"'})
-
-
-@app.route('/users', methods=['GET'])
+@app.route('/user', methods=['GET'])
 def get_all_users():
     users = Users.query.all()
-
-    result = []
-
+    output = []
     for user in users:
         user_data = {}
         user_data['public_id'] = user.public_id
         user_data['name'] = user.name
         user_data['password'] = user.password
         user_data['admin'] = user.admin
+        output.append(user_data)
 
-        result.append(user_data)
-
-    return jsonify({'users': result})
+    return jsonify({'users': output})
 
 
+@app.route('/user/<public_id>', methods=['GET'])
+def get_one_user(public_id):
+    user = Users.query.filter_by(public_id=public_id).first()
+    if not user:
+        return jsonify({'message': 'No user found!'})
+
+    user_data = {}
+    user_data['public_id'] = user.public_id
+    user_data['name'] = user.name
+    user_data['password'] = user.password
+    user_data['admin'] = user.admin
+
+    return jsonify({'user': user_data})
+
+
+@app.route('/user/<public_id>', methods=['PUT'])
+def promote_user(public_id):
+    user = Users.query.filter_by(public_id=public_id).first()
+
+    if not user:
+        return jsonify({'message': 'No user found!'})
+
+    user.admin = True
+    db.session.commit()
+
+    return jsonify({'message': 'The user has been promoted!'})
+
+
+@app.route('/user/<public_id>', methods=['DELETE'])
+def delete_user(public_id):
+    user = Users.query.filter_by(public_id=public_id).first()
+
+    if not user:
+        return jsonify({'message': 'No user found!'})
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({'message': 'The user has been deleted!'})
+
+
+@app.route('/login')
+def login():
+    auth = request.authorization
+
+    if not auth or not auth.username or not auth.password:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    user = Users.query.filter_by(name=auth.username).first()
+
+    if not user:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    if check_password_hash(user.password, auth.password):
+        token = jwt.encode({'public_id': user.public_id,
+                            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
+                           app.config['SECRET_KEY'])
+
+        return jsonify({'token': token.decode('UTF-8')})
+        # return jsonify({'token': token})
+
+    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+
+# ___________________________________________________________________#
 @app.route('/categories/', methods=['GET'])
 def categories() -> wrappers.Response:
     return jsonify(dict(Categories.get_categories()))
@@ -92,7 +135,6 @@ def get_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/', methods=['POST'])
-@token_required
 def add_category() -> wrappers.Response:
     category = request.form['data']
     try:
@@ -103,7 +145,6 @@ def add_category() -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
-@token_required
 def delete_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
@@ -111,7 +152,6 @@ def delete_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
-@token_required
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     try:
