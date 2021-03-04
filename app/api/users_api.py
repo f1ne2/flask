@@ -1,12 +1,14 @@
 from app import app
 from app import db
-from flask import jsonify, wrappers, request, make_response
 from app.models import Users
+
+from flask import jsonify, wrappers, request, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+
 import uuid
 import jwt
 import datetime
-from functools import wraps
 
 
 def token_required(f):
@@ -31,9 +33,39 @@ def token_required(f):
     return decorated
 
 
+@app.route('/login')
+def login() -> wrappers.Response:
+    auth = request.authorization
+
+    if not auth or not auth.username or not auth.password:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    user = Users.query.filter_by(name=auth.username).first()
+
+    if not user:
+        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+    if check_password_hash(user.password, auth.password):
+        token = jwt.encode({'id': user.id,
+                            'exp':
+                                datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
+                           app.config['SECRET_KEY'])
+
+        # token = jwt.encode({'id': user.id}, app.config['SECRET_KEY'])
+
+        return jsonify({'token': token.decode("utf-8")})
+
+        # return jsonify({'token': token})
+        # return jsonify({'token': token.encode().decode()})
+        # return jsonify({'token': token.encode("windows-1252").decode("utf-8")})
+
+    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+
 @app.route('/user', methods=['POST'])
 def create_user() -> wrappers.Response:
     data = request.get_json()
+
     hashed_password = generate_password_hash(data['password'], method='sha256')
     new_user = Users(name=data['name'], password=hashed_password, admin=False)
 
@@ -43,10 +75,26 @@ def create_user() -> wrappers.Response:
     return jsonify({'message': 'New user created!'})
 
 
+@app.route('/user/<int:id>', methods=['PUT'])
+@token_required
+def promote_user(id: int, current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
+    user = Users.query.filter_by(id=id).first()
+
+    if not user:
+        return jsonify({'message': 'No user found!'})
+
+    user.admin = True
+    db.session.commit()
+
+    return jsonify({'message': 'The user has been promoted!'})
+
+
 @app.route('/user', methods=['GET'])
 @token_required
 def get_all_users(current_user) -> wrappers.Response:
-
     if not current_user.admin:
         return jsonify({'message': 'Cannot perform that function!'})
 
@@ -67,8 +115,8 @@ def get_all_users(current_user) -> wrappers.Response:
 @app.route('/user/<int:id>', methods=['GET'])
 @token_required
 def get_one_user(id: int, current_user) -> wrappers.Response:
-
-    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
 
     user = Users.query.filter_by(id=id).first()
     if not user:
@@ -83,28 +131,9 @@ def get_one_user(id: int, current_user) -> wrappers.Response:
     return jsonify({'user': user_data})
 
 
-@app.route('/user/<int:id>', methods=['PUT'])
-@token_required
-def promote_user(id: int, current_user) -> wrappers.Response:
-
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
-    user = Users.query.filter_by(id=id).first()
-
-    if not user:
-        return jsonify({'message': 'No user found!'})
-
-    user.admin = True
-    db.session.commit()
-
-    return jsonify({'message': 'The user has been promoted!'})
-
-
 @app.route('/user/<int:id>', methods=['DELETE'])
 @token_required
 def delete_user(id: int, current_user) -> wrappers.Response:
-
     if not current_user.admin:
         return jsonify({'message': 'Cannot perform that function!'})
 
@@ -117,28 +146,3 @@ def delete_user(id: int, current_user) -> wrappers.Response:
     db.session.commit()
 
     return jsonify({'message': 'The user has been deleted!'})
-
-
-@app.route('/login')
-def login() -> wrappers.Response:
-    auth = request.authorization
-
-    if not auth or not auth.username or not auth.password:
-        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
-
-    user = Users.query.filter_by(name=auth.username).first()
-
-    if not user:
-        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
-
-    if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'id': user.id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
-                           app.config['SECRET_KEY'])
-
-        # token = jwt.encode({'id': user.id}, app.config['SECRET_KEY'])
-
-        return jsonify({'token': token.decode("utf-8")})
-        # return jsonify({'token': token.encode().decode()})
-        # return jsonify({'token': token.encode("windows-1252").decode("utf-8")})
-
-    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})

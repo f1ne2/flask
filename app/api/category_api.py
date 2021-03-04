@@ -1,7 +1,9 @@
 from app import app
 from app.api.users_api import token_required
-from flask import jsonify, wrappers, request
 from app.models import Categories
+
+from flask import jsonify, wrappers, request
+
 
 
 @app.route('/')
