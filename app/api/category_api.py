@@ -13,15 +13,19 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
+
         if 'x-access-token' in request.headers:
             token = request.headers['x-access-token']
+
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
+
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
-            current_user = Users.query.filter_by(public_id=data['public_id']).first()
+            data = jwt.encode().decode(token, app.config['SECRET_KEY'])
+            current_user = Users.query.filter_by(id=data['id']).first()
         except:
             return jsonify({'message': 'Token is invalid!'}), 401
+
         return f(current_user, *args, **kwargs)
 
     return decorated
@@ -36,21 +40,22 @@ def home_page():
 def create_user():
     data = request.get_json()
     hashed_password = generate_password_hash(data['password'], method='sha256')
-    new_user = Users(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+    new_user = Users(name=data['name'], password=hashed_password, admin=False)
     db.session.add(new_user)
     db.session.commit()
     return jsonify({'message': 'New user created!'})
 
 
 @app.route('/user', methods=['GET'])
+@token_required
 def get_all_users(current_user):
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
+
     users = Users.query.all()
     output = []
     for user in users:
         user_data = {}
-        user_data['public_id'] = user.public_id
+        user_data['id'] = user.id
         user_data['name'] = user.name
         user_data['password'] = user.password
         user_data['admin'] = user.admin
@@ -59,16 +64,17 @@ def get_all_users(current_user):
     return jsonify({'users': output})
 
 
-@app.route('/user/<public_id>', methods=['GET'])
-def get_one_user(public_id, current_user):
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-    user = Users.query.filter_by(public_id=public_id).first()
+@app.route('/user/<int:id>', methods=['GET'])
+@token_required
+def get_one_user(id: int, current_user):
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
+
+    user = Users.query.filter_by(id=id).first()
     if not user:
         return jsonify({'message': 'No user found!'})
 
     user_data = {}
-    user_data['public_id'] = user.public_id
+    user_data['id'] = user.id
     user_data['name'] = user.name
     user_data['password'] = user.password
     user_data['admin'] = user.admin
@@ -76,12 +82,11 @@ def get_one_user(public_id, current_user):
     return jsonify({'user': user_data})
 
 
-@app.route('/user/<public_id>', methods=['PUT'])
+@app.route('/user/<int:id>', methods=['PUT'])
 @token_required
-def promote_user(current_user, public_id):
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-    user = Users.query.filter_by(public_id=public_id).first()
+def promote_user(id: int, current_user):
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
+    user = Users.query.filter_by(id=id).first()
 
     if not user:
         return jsonify({'message': 'No user found!'})
@@ -92,12 +97,11 @@ def promote_user(current_user, public_id):
     return jsonify({'message': 'The user has been promoted!'})
 
 
-@app.route('/user/<public_id>', methods=['DELETE'])
+@app.route('/user/<int:id>', methods=['DELETE'])
 @token_required
-def delete_user(current_user, public_id):
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-    user = Users.query.filter_by(public_id=public_id).first()
+def delete_user(id: int, current_user):
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
+    user = Users.query.filter_by(id=id).first()
 
     if not user:
         return jsonify({'message': 'No user found!'})
@@ -121,11 +125,13 @@ def login():
         return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
 
     if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'public_id': user.public_id,
-                            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
+        token = jwt.encode({'id': user.id,'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
                            app.config['SECRET_KEY'])
+        #token = jwt.encode({'id': user.id}, app.config['SECRET_KEY'])
 
-        return jsonify({'token': token.encode("windows-1252").decode("utf-8")})
+        return jsonify({'token': token.encode().decode()})
+        # return jsonify({'token': token.decode("utf-8")})
+        # return jsonify({'token': token.encode("windows-1252").decode("utf-8")})
 
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
 
@@ -145,8 +151,7 @@ def get_category(id: int) -> wrappers.Response:
 @app.route('/category/', methods=['POST'])
 @token_required
 def add_category(current_user) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
     category = request.form['data']
     try:
         Categories.add(category)
@@ -158,18 +163,15 @@ def add_category(current_user) -> wrappers.Response:
 @app.route('/category/<int:id>', methods=['DELETE'])
 @token_required
 def delete_category(id: int, current_user) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
+    if not current_user.admin: return jsonify({'message': 'Cannot perform that function!'})
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
     return jsonify({"200 OK": "HTTP/1.1"})
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
-@token_required
-def edit_category(id: int, current_user) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
+# @token_required
+def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     try:
         Categories.edit(request.form['data'], id)
