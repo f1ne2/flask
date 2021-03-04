@@ -11,8 +11,8 @@ class Categories(db.Model):
         return '{}'.format(self.category_name)
 
     @staticmethod
-    def add(category_name: str) -> None:
-        category = Categories(category_name=category_name)
+    def add(category_dict: dict) -> None:
+        category = Categories(category_name=category_dict["data"])
         db.session.add(category)
         db.session.commit()
 
@@ -29,16 +29,18 @@ class Categories(db.Model):
         db.session.delete(delete)
         db.session.commit()
 
-    def to_json(self):
-        json_category = {"Category_id": self.category_id,
-                         "Category_name": self.category_name}
-        return json_category
-
+    @staticmethod
+    def to_json(dictionary: dict) -> dict:
+        res = {"categories": []}
+        res2 = {"categories": [res["categories"].append({"id": k, "name": v})
+                               for k, v in dictionary.items()]}
+        return res
 
     @staticmethod
-    def edit(category_name: str, id: int) -> None:
+    def edit(category_name: dict, id: int) -> None:
+        print(category_name)
         Categories.query.filter_by(category_id=id).update \
-            (dict(category_name=category_name))
+            (dict(category_name=category_name["data"]))
         db.session.commit()
 
 
