@@ -1,7 +1,14 @@
 from app import app
-from app import db
-from flask import jsonify, wrappers, request
+from app.api.users_api import token_required
 from app.models import Categories
+
+from flask import jsonify, wrappers, request
+
+
+
+@app.route('/')
+def home_page():
+    return 'Home page!'
 
 
 @app.route('/categories/', methods=['GET'])
@@ -16,7 +23,11 @@ def get_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/', methods=['POST'])
-def add_category() -> wrappers.Response:
+@token_required
+def add_category(current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
     category = request.form['data']
     try:
         Categories.add(category)
@@ -26,18 +37,25 @@ def add_category() -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
-def delete_category(id: int) -> wrappers.Response:
+@token_required
+def delete_category(id: int, current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
     return jsonify({"200 OK": "HTTP/1.1"})
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
-def edit_category(id: int) -> wrappers.Response:
+@token_required
+def edit_category(id: int, current_user) -> wrappers.Response:
+    if not current_user.admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
     Categories.query.get_or_404(id)
     try:
         Categories.edit(request.form['data'], id)
         return jsonify({"200 OK": "HTTP/1.1"})
     except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-
