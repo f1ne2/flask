@@ -38,7 +38,7 @@ def add_category(current_user) -> wrappers.Response:
 
 @app.route('/category/<int:id>', methods=['DELETE'])
 @token_required
-def delete_category(id: int, current_user) -> wrappers.Response:
+def delete_category(current_user, id: int) -> wrappers.Response:
     if not current_user.admin:
         return jsonify({'message': 'Cannot perform that function!'})
 
@@ -49,7 +49,7 @@ def delete_category(id: int, current_user) -> wrappers.Response:
 
 @app.route('/category/<int:id>', methods=['PUT'])
 @token_required
-def edit_category(id: int, current_user) -> wrappers.Response:
+def edit_category(current_user, id: int) -> wrappers.Response:
     if not current_user.admin:
         return jsonify({'message': 'Cannot perform that function!'})
 
