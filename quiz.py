@@ -6,3 +6,7 @@ from app.models import Categories, Questions, Answers
 def make_shell_context():
     return {'db': db, 'Categories': Categories, 'Questions': Questions,
             'Answers': Answers}
+
+
+if __name__ == "__main__":
+    app.run(port=8080, debug=True)

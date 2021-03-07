@@ -1,0 +1,13 @@
+version: ‘3’
+service:
+  database:
+    image: postgres
+    environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: admin
+    POSTGRES_DB: quiz
+
+  web:
+    image: quiz
+    ports:
+      - “8080:8080”

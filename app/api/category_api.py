@@ -5,7 +5,6 @@ from app.models import Categories
 from flask import jsonify, wrappers, request
 
 
-
 @app.route('/')
 def home_page():
     return 'Home page!'
@@ -24,10 +23,7 @@ def get_category(id: int) -> wrappers.Response:
 
 @app.route('/category/', methods=['POST'])
 @token_required
-def add_category(current_user) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def add_category() -> wrappers.Response:
     category = request.form['data']
     try:
         Categories.add(category)
@@ -38,10 +34,7 @@ def add_category(current_user) -> wrappers.Response:
 
 @app.route('/category/<int:id>', methods=['DELETE'])
 @token_required
-def delete_category(current_user, id: int) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def delete_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
     return jsonify({"200 OK": "HTTP/1.1"})
@@ -49,10 +42,7 @@ def delete_category(current_user, id: int) -> wrappers.Response:
 
 @app.route('/category/<int:id>', methods=['PUT'])
 @token_required
-def edit_category(current_user, id: int) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     try:
         Categories.edit(request.form['data'], id)

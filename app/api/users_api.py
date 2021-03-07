@@ -24,10 +24,13 @@ def token_required(f):
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms="HS256")
             current_user = Users.query.filter_by(id=data['id']).first()
+            if not current_user.admin:
+                return jsonify({'message': 'Cannot perform that function!'})
+
         except:
             return jsonify({'message': 'Token is invalid!'}), 401
 
-        return f(current_user, *args, **kwargs)
+        return f(*args, **kwargs)
 
     return decorated
 
@@ -45,7 +48,7 @@ def login() -> wrappers.Response:
         return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
 
     if check_password_hash(user.password, auth.password):
-        token = jwt.encode({'id': user.id,
+        token = jwt.encode({'id': user.id, 'admin': user.admin,
                             'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10)},
                            app.config['SECRET_KEY'])
 
@@ -69,10 +72,7 @@ def create_user() -> wrappers.Response:
 
 @app.route('/user/<int:id>', methods=['PUT'])
 @token_required
-def promote_user(current_user, id: int) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def promote_user(id: int) -> wrappers.Response:
     user = Users.query.filter_by(id=id).first()
 
     if not user:
@@ -86,10 +86,7 @@ def promote_user(current_user, id: int) -> wrappers.Response:
 
 @app.route('/user', methods=['GET'])
 @token_required
-def get_all_users(current_user) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def get_all_users() -> wrappers.Response:
     users = Users.query.all()
     output = []
 
@@ -106,10 +103,7 @@ def get_all_users(current_user) -> wrappers.Response:
 
 @app.route('/user/<int:id>', methods=['GET'])
 @token_required
-def get_one_user(current_user, id: int) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def get_one_user(id: int) -> wrappers.Response:
     user = Users.query.filter_by(id=id).first()
     if not user:
         return jsonify({'message': 'No user found!'})
@@ -125,10 +119,7 @@ def get_one_user(current_user, id: int) -> wrappers.Response:
 
 @app.route('/user/<int:id>', methods=['DELETE'])
 @token_required
-def delete_user(current_user, id: int) -> wrappers.Response:
-    if not current_user.admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
+def delete_user(id: int) -> wrappers.Response:
     user = Users.query.filter_by(id=id).first()
 
     if not user:
