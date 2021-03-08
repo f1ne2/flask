@@ -23,8 +23,9 @@ def token_required(f):
 
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms="HS256")
-            current_user = Users.query.filter_by(id=data['id']).first()
-            if not current_user.admin:
+            current_user = [data['id'], data['admin']]
+
+            if not current_user[1]:
                 return jsonify({'message': 'Cannot perform that function!'})
 
         except:
