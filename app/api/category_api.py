@@ -1,7 +1,13 @@
 from app import app
-from app import db
-from flask import jsonify, wrappers, request
+from app.api.users_api import token_required
 from app.models import Categories
+
+from flask import jsonify, wrappers, request
+
+
+@app.route('/')
+def home_page():
+    return 'Home page!'
 
 
 @app.route('/categories/', methods=['GET'])
@@ -16,6 +22,7 @@ def get_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/', methods=['POST'])
+@token_required
 def add_category() -> wrappers.Response:
     category = request.form['data']
     try:
@@ -26,6 +33,7 @@ def add_category() -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['DELETE'])
+@token_required
 def delete_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     Categories.delete_note(id)
@@ -33,6 +41,7 @@ def delete_category(id: int) -> wrappers.Response:
 
 
 @app.route('/category/<int:id>', methods=['PUT'])
+@token_required
 def edit_category(id: int) -> wrappers.Response:
     Categories.query.get_or_404(id)
     try:
@@ -40,4 +49,3 @@ def edit_category(id: int) -> wrappers.Response:
         return jsonify({"200 OK": "HTTP/1.1"})
     except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-

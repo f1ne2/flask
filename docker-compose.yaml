@@ -1,0 +1,25 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: quiz
+    ports:
+      - 6060:5432
+    volumes:
+      - /usr/src/app
+
+  flask:
+    container_name: backend
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    depends_on:
+      - "db"
