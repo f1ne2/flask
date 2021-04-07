@@ -45,4 +45,4 @@ def edit_category(id: int) -> wrappers.Response:
 
 @app.route('/', methods=['GET'])
 def categories() -> Dict[str, List[Dict[str, str]]]:
-    return Categories.to_json(dict(Categories.get_categories()))
+    return jsonify({"200 OK": "HTTP/1.1"})
