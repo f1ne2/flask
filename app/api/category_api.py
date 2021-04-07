@@ -42,3 +42,7 @@ def edit_category(id: int) -> wrappers.Response:
     except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
 
+
+@app.route('/', methods=['GET'])
+def categories() -> Dict[str, List[Dict[str, str]]]:
+    return Categories.to_json(dict(Categories.get_categories()))
