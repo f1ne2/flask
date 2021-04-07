@@ -13,6 +13,7 @@ class Categories(db.Model):
     @staticmethod
     def add(category_dict: dict) -> None:
         category = Categories(category_name=category_dict["data"])
+        print(category)
         db.session.add(category)
         db.session.commit()
 
