@@ -1,1 +1,0 @@
-web: gunicorn quiz:app
