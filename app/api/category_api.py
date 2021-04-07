@@ -19,7 +19,6 @@ def get_category(id: int) -> Dict[str, List[Dict[str, str]]]:
 @app.route('/category/', methods=['POST'])
 def add_category() -> wrappers.Response:
     category = request.get_json()
-    print(category)
     try:
         Categories.add(category)
         return jsonify({"201 Created": "HTTP/1.1"})
