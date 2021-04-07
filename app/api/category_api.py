@@ -41,8 +41,3 @@ def edit_category(id: int) -> wrappers.Response:
         return jsonify({"200 OK": "HTTP/1.1"})
     except:
         return jsonify({"403 Forbidden": "HTTP/1.1"})
-
-
-@app.route('/', methods=['GET'])
-def categories() -> Dict[str, List[Dict[str, str]]]:
-    return jsonify({"200 OK": "HTTP/1.1"})
